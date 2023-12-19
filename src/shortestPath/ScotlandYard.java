@@ -38,7 +38,39 @@ public class ScotlandYard {
 		DirectedGraph<Integer> sy_graph = new AdjacencyListDirectedGraph<>();
 		Scanner in = new Scanner(new File("data/ScotlandYard_Kanten.txt"));
 
-		// ...
+		while (in.hasNextLine()) {
+			String line = in.nextLine();
+			String[] parts = line.split(" ");
+
+			Integer start = Integer.parseInt(parts[0]);
+			Integer finish = Integer.parseInt(parts[1]);
+			String mobility = parts[2];
+			int weight = 0;
+
+			switch (mobility){
+				case "Taxi":
+					weight = 2;
+					break;
+				case "Bus":
+					weight = 3;
+					break;
+				case "UBahn":
+					weight = 5;
+					break;
+			}
+
+			// Prüfen, ob der Schlüssel bereits existiert und Informationen hinzufügen
+			if (sy_graph.getVertexSet().contains(start) && sy_graph.getSuccessorVertexSet(start).contains(finish)) {
+				if(sy_graph.getWeight(start,finish) > weight){
+					sy_graph.addEdge(start,finish,weight);
+					sy_graph.addEdge(finish,start,weight);
+				}
+
+			} else {
+				sy_graph.addEdge(start,finish,weight);
+				sy_graph.addEdge(finish,start,weight);
+			}
+		}
 		
 		// Test, ob alle Kanten eingelesen wurden: 
 		System.out.println("Number of Vertices:       " + sy_graph.getNumberOfVertexes());	// 199

@@ -5,9 +5,8 @@ package shortestPath;
 
 import directedGraph.*;
 import sim.SYSimulation;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.List;
+
+import java.util.*;
 
 // ...
 
@@ -20,11 +19,16 @@ import java.util.List;
 public class ShortestPath<V> {
 	
 	SYSimulation sim = null;
-	
 	Map<V,Double> dist; 		// Distanz für jeden Knoten
 	Map<V,V> pred; 				// Vorgänger für jeden Knoten
 	IndexMinPQ<V,Double> cand; 	// Kandidaten als PriorityQueue PQ
-	// ...
+
+	Heuristic<V> heuristic;
+
+	DirectedGraph<V> graph;
+
+	V goal;
+	V start;
 
 	/**
 	 * Konstruiert ein Objekt, das im Graph g k&uuml;rzeste Wege 
@@ -37,10 +41,21 @@ public class ShortestPath<V> {
 	 * dem Dijkstra-Verfahren gesucht.
 	 */
 	public ShortestPath(DirectedGraph<V> g, Heuristic<V> h) {
-		dist = new HashMap<>();
-		pred = new HashMap<>();
-		cand = new IndexMinPQ<>();
-		// ...
+		this.graph = g;
+		this.heuristic = h;
+		reset();
+	}
+
+	public void reset(){
+		this.dist = new HashMap<>();
+		this.pred = new HashMap<>();
+		this.cand = new IndexMinPQ<>();
+
+		// cand initialisieren
+		for(V v:  graph.getVertexSet()){
+			dist.put(v,-1.);
+			pred.put(v, null);
+		}
 	}
 
 	/**
@@ -60,7 +75,7 @@ public class ShortestPath<V> {
 	}
 
 	/**
-	 * Sucht den kürzesten Weg von Starknoten s zum Zielknoten g.
+	 * Sucht den kürzesten Weg von Startknoten s zum Zielknoten g.
 	 * <p>
 	 * Falls die Simulation mit setSimulator(sim) aktiviert wurde, wird der Knoten,
 	 * der als nächstes aus der Kandidatenliste besucht wird, animiert.
@@ -68,7 +83,33 @@ public class ShortestPath<V> {
 	 * @param g Zielknoten
 	 */
 	public void searchShortestPath(V s, V g) {
-		// ...
+		this.reset();
+		this.goal = g;
+		this.start = s;
+
+		dist.put(s,0.);
+		cand.add(s,0 + (heuristic != null ? heuristic.estimatedCost(s,g) : 0));
+
+		while(!cand.isEmpty()){
+			V v = cand.removeMin();
+			//animation
+			if(this.sim != null) sim.visitStation(Integer.parseInt(v.toString()));
+
+			if(v == g)break;
+			//System.out.printf("Besuche Knoten %s mit d = %s %n", v.toString(), dist.get(v).toString());
+			for(V w : graph.getSuccessorVertexSet(v)){
+				if(dist.get(w) == -1){ // noch nicht drinnen
+					pred.put(w,v);
+					dist.put(w, dist.get(v) + graph.getWeight(w,v));
+					cand.add(w,dist.get(w)+ (heuristic != null ? heuristic.estimatedCost(w,g) : 0));
+				}else if(dist.get(v) + graph.getWeight(v,w) < dist.get(w)){   // bessere distanz
+					pred.put(w,v);
+					dist.put(w, dist.get(v) + graph.getWeight(v,w));
+					cand.change(w, dist.get(w) + (heuristic != null ? heuristic.estimatedCost(w,g) : 0));
+				}
+			}
+		}
+
 	}
 
 	/**
@@ -78,8 +119,21 @@ public class ShortestPath<V> {
 	 * @return kürzester Weg als Liste von Knoten.
 	 */
 	public List<V> getShortestPath() {
-		// ...
-		return null;
+		List<V> shortestPath = new ArrayList<>();
+
+		if(pred.get(goal) == null){
+			throw new IllegalArgumentException();
+		}
+
+		V prev = goal;
+
+		while(start != prev){
+			shortestPath.add(prev);
+			prev = pred.get(prev);
+		}
+		shortestPath.add(start);
+		Collections.reverse(shortestPath);
+		return shortestPath;
 	}
 
 	/**
@@ -89,8 +143,12 @@ public class ShortestPath<V> {
 	 * @return Länge eines kürzesten Weges.
 	 */
 	public double getDistance() {
-		// ...
-		return 0.0;
+		List<V> shortestPath = getShortestPath();
+		double dist = 0;
+		for(int i = 0; i < shortestPath.size()-1; i++){
+			dist += graph.getWeight(shortestPath.get(i), shortestPath.get(i+1));
+		}
+		return dist;
 	}
 
 }
